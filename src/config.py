@@ -14,31 +14,14 @@ def _numbered_keys(prefix: str, count: int) -> tuple[str, ...]:
     return tuple(_env(f"{prefix}_{index}") for index in range(1, count + 1))
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
-    return _env(name, "true" if default else "false").lower() in {"1", "true", "yes", "on"}
-
-
 @dataclass(frozen=True)
 class Settings:
-    supabase_url: str
-    supabase_key: str
-    supabase_scope_id: str
-    enable_supabase_persistence: bool
     groq_api_keys: tuple[str, ...]
     gemini_api_keys: tuple[str, ...]
     openrouter_api_key: str
     provider_timeout_seconds: float
     max_upload_bytes: int
     max_pdf_pages: int
-
-    @property
-    def supabase_enabled(self) -> bool:
-        return bool(
-            self.enable_supabase_persistence
-            and self.supabase_url
-            and self.supabase_key
-            and self.supabase_scope_id
-        )
 
     @property
     def any_text_provider_enabled(self) -> bool:
@@ -68,10 +51,6 @@ def load_settings() -> Settings:
         max_pdf_pages = 6
 
     return Settings(
-        supabase_url=_env("SUPABASE_URL").rstrip("/"),
-        supabase_key=_env("SUPABASE_KEY"),
-        supabase_scope_id=_env("SUPABASE_SCOPE_ID"),
-        enable_supabase_persistence=_env_bool("ENABLE_SUPABASE_PERSISTENCE"),
         groq_api_keys=_numbered_keys("GROQ_API_KEY", 3),
         gemini_api_keys=_numbered_keys("GEMINI_API_KEY", 4),
         openrouter_api_key=_env("OPENROUTER_API_KEY"),

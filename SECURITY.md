@@ -1,19 +1,17 @@
-# Security and deployment checklist
+# Security notes for the portfolio demo
 
-Saad.AI must not enable shared Supabase chat persistence in a public deployment until the database has a `scope_id` column and row-level security policies that restrict `select`, `insert`, `update`, and `delete` operations to the authenticated or explicitly assigned scope.
+Saad.AI is designed as a lightweight Streamlit portfolio project. Chat history is session-local and no database or authentication system is required.
 
-The application keeps `ENABLE_SUPABASE_PERSISTENCE=false` by default. When persistence is enabled, configure `SUPABASE_SCOPE_ID` with a stable value that represents the intended tenant or authenticated user boundary. Do not use a shared service credential in a browser-exposed client, and do not reuse one scope identifier for unrelated users.
+Provider credentials must be stored as Hugging Face Space secrets or server-side environment variables. Never commit `.env`, provider keys, API responses containing secrets, uploaded files, or generated caches.
 
-Provider credentials must be stored as Hugging Face Space secrets or server-side environment variables. Never commit `.env`, `secrets.toml`, provider keys, Supabase keys, uploaded files, or generated caches.
+The application bounds provider timeouts, uploaded file size, and PDF page count through `src/config.py`. Keep those limits enabled when deploying the demo, and review uploaded-file behavior before publishing a public URL.
 
-Before a production release, verify the following:
+For a portfolio release, verify that the following checks pass:
 
 | Check | Required outcome |
 |---|---|
-| Supabase RLS | Enabled and tested for cross-scope isolation |
-| Persistence feature flag | Disabled unless the database migration and policies are complete |
 | Provider keys | Stored only as server-side secrets |
-| Upload limits | `MAX_UPLOAD_BYTES` and `MAX_PDF_PAGES` set to acceptable values |
-| Error messages | Do not expose provider keys or internal service credentials |
-| Dependency updates | Reviewed and tested through CI before deployment |
-| Branch release | Deploy a reviewed commit from the stabilization branch, not an uncommitted local tree |
+| Upload limits | `MAX_UPLOAD_BYTES` and `MAX_PDF_PAGES` remain configured |
+| Error messages | Do not expose API credentials or private environment values |
+| Tests | CI passes on the supported Python versions |
+| Demo history | Clearly described as session-local, not permanent storage |

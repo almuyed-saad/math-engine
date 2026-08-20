@@ -12,7 +12,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.provider_timeout_seconds, 60.0)
         self.assertEqual(settings.max_upload_bytes, 5 * 1024 * 1024)
         self.assertEqual(settings.max_pdf_pages, 6)
-        self.assertFalse(settings.supabase_enabled)
+        self.assertFalse(settings.any_text_provider_enabled)
 
     def test_limits_are_clamped(self):
         with patch.dict(
@@ -28,32 +28,6 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.provider_timeout_seconds, 120.0)
         self.assertEqual(settings.max_upload_bytes, 25 * 1024 * 1024)
         self.assertEqual(settings.max_pdf_pages, 20)
-
-    def test_persistence_requires_explicit_feature_flag(self):
-        with patch.dict(
-            os.environ,
-            {
-                "SUPABASE_URL": "https://example.supabase.co",
-                "SUPABASE_KEY": "service-key-placeholder",
-                "SUPABASE_SCOPE_ID": "scope-a",
-            },
-            clear=True,
-        ):
-            settings = load_settings()
-        self.assertFalse(settings.supabase_enabled)
-
-        with patch.dict(
-            os.environ,
-            {
-                "SUPABASE_URL": "https://example.supabase.co",
-                "SUPABASE_KEY": "service-key-placeholder",
-                "SUPABASE_SCOPE_ID": "scope-a",
-                "ENABLE_SUPABASE_PERSISTENCE": "true",
-            },
-            clear=True,
-        ):
-            settings = load_settings()
-        self.assertTrue(settings.supabase_enabled)
 
     def test_numbered_provider_keys_are_loaded_in_order(self):
         with patch.dict(

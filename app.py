@@ -8,9 +8,6 @@ import streamlit as st
 import os
 import uuid as _uuid
 from html import escape as _escape_html
-from urllib.parse import quote as _urlquote
-import requests
-import json as _json
 import sympy as sp
 from sympy import (
     symbols, diff, integrate, limit, solve,
@@ -400,8 +397,6 @@ if "last_submitted" not in st.session_state:
     st.session_state.last_submitted = ""
 if "chats" not in st.session_state:
     st.session_state.chats = {}
-if "supa_loaded" not in st.session_state:
-    st.session_state.supa_loaded = False
 if "current_chat_id" not in st.session_state:
     st.session_state.current_chat_id = None
 if "pending_file_bytes" not in st.session_state:
@@ -420,79 +415,9 @@ if "attached_file_mime" not in st.session_state:
 if "show_uploader" not in st.session_state:
     st.session_state.show_uploader = False
 
-# ════════════════════════════════════════════════════════════════════
-# SUPABASE — Persistent chat history
-# ════════════════════════════════════════════════════════════════════
-_SUPA_URL = settings.supabase_url
-_SUPA_KEY = settings.supabase_key
-# Remote persistence is opt-in and must be scoped. Without a scope identifier,
-# chats remain in the current Streamlit session and are never loaded globally.
-_SUPA_SCOPE_ID = settings.supabase_scope_id
-
-def _supa_headers():
-    return {
-        "apikey": _SUPA_KEY,
-        "Authorization": f"Bearer {_SUPA_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-    }
-
-def supa_load_all_chats():
-    """Load all chats from Supabase."""
-    if not _SUPA_URL or not _SUPA_KEY or not _SUPA_SCOPE_ID:
-        return {}
-    try:
-        resp = requests.get(
-            f"{_SUPA_URL}/rest/v1/chats?select=*&scope_id=eq.{_urlquote(_SUPA_SCOPE_ID)}&order=created_at.desc",
-            headers=_supa_headers(), timeout=5
-        )
-        if resp.status_code == 200:
-            rows = resp.json()
-            return {r["id"]: {
-                "title": r["title"],
-                "messages": r["messages"],
-                "created": r["created_at"][:16].replace("T"," ")
-            } for r in rows}
-    except Exception:
-        pass
-    return {}
-
-def supa_save_chat(chat_id, title, messages):
-    """Save or update a chat in Supabase."""
-    if not _SUPA_URL or not _SUPA_KEY or not _SUPA_SCOPE_ID or not messages:
-        return
-    try:
-        requests.post(
-            f"{_SUPA_URL}/rest/v1/chats",
-            headers={**_supa_headers(), "Prefer": "resolution=merge-duplicates"},
-            data=_json.dumps({
-                "id": chat_id,
-                "scope_id": _SUPA_SCOPE_ID,
-                "title": title,
-                "messages": messages
-            }), timeout=5
-        )
-    except Exception:
-        pass
-
-def supa_delete_chat(chat_id):
-    """Delete a chat from Supabase."""
-    if not _SUPA_URL or not _SUPA_KEY or not _SUPA_SCOPE_ID:
-        return
-    try:
-        requests.delete(
-            f"{_SUPA_URL}/rest/v1/chats?id=eq.{_urlquote(chat_id)}&scope_id=eq.{_urlquote(_SUPA_SCOPE_ID)}",
-            headers=_supa_headers(), timeout=5
-        )
-    except Exception:
-        pass
-
-# Load chats from Supabase now that functions are defined
-if not st.session_state.supa_loaded:
-    loaded = supa_load_all_chats()
-    if loaded:
-        st.session_state.chats = loaded
-    st.session_state.supa_loaded = True
+# Chat history is intentionally session-local for the portfolio edition.
+# This keeps the demo simple, avoids database configuration, and makes the
+# project straightforward to deploy on Streamlit or Hugging Face Spaces.
 
 def new_chat():
     """Start a fresh chat session."""
@@ -506,7 +431,7 @@ def new_chat():
     st.session_state.attached_file_mime  = None
 
 def save_current_chat():
-    """Save current messages to session state and Supabase."""
+    """Save current messages to the current Streamlit session."""
     cid = st.session_state.current_chat_id
     if not cid or not st.session_state.messages:
         return
@@ -518,8 +443,6 @@ def save_current_chat():
         "messages": list(st.session_state.messages),
         "created": _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # ISO-sortable
     }
-    # Save to Supabase (persistent)
-    supa_save_chat(cid, title, list(st.session_state.messages))
 
 def load_chat(chat_id):
     """Load a previous chat."""
@@ -752,7 +675,6 @@ with st.sidebar:
             with col2:
                 if st.button("🗑", key=f"del_{chat_id}"):
                     del st.session_state.chats[chat_id]
-                    supa_delete_chat(chat_id)  # delete from Supabase too
                     if chat_id == st.session_state.current_chat_id:
                         new_chat()
                     st.rerun()

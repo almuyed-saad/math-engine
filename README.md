@@ -76,16 +76,7 @@ GEMINI_API_KEY_4
 OPENROUTER_API_KEY
 ```
 
-Supabase persistence is now **opt-in and scope-limited**. Set the following only after creating a `scope_id` column and enabling row-level security policies that restrict access to the intended user or session scope:
-
-```text
-SUPABASE_URL
-SUPABASE_KEY
-SUPABASE_SCOPE_ID
-ENABLE_SUPABASE_PERSISTENCE=false
-```
-
-Persistence remains disabled unless `ENABLE_SUPABASE_PERSISTENCE=true`, a non-empty scope identifier is supplied, and the database is configured with row-level security. Without all of those conditions, the application keeps chat history in the current Streamlit session and does not load a global chat table.
+Chat history is intentionally **session-local** in the portfolio edition. This keeps the application easy to understand and deploy while still allowing users to create, switch, and delete conversations during a demo session. A database is not required.
 
 ## Example prompts
 
@@ -106,9 +97,7 @@ The active source uses hosted API providers rather than loading a local Hugging 
 
 Runtime configuration is centralized in `src/config.py`. Copy `.env.example` to `.env` for local development, or add the same variables as Hugging Face Space secrets. Provider timeouts, upload size, and PDF page limits are validated and clamped at startup so malformed deployment values cannot create unbounded resource usage.
 
-For production deployment, configure authentication or a per-user persistence scope before enabling Supabase chat history. Do not expose a shared service key or load unscoped chat rows in a public application. See [SECURITY.md](SECURITY.md) for the release checklist.
-
-Every push and pull request runs the deterministic test suite and Python compilation checks through [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+For a portfolio deployment, add the provider secrets to Hugging Face Spaces or another Streamlit host, then launch the app with `streamlit run app.py`. No database or authentication setup is required. Every push and pull request runs the deterministic test suite and Python compilation checks through [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Credits
 
