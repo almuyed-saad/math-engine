@@ -2,7 +2,7 @@
 
 Saad.AI is an academic mathematics assistant for university students. It combines a deterministic **SymPy computation engine** with configurable AI providers for explanations, proofs, theory questions, graph descriptions, and image/PDF-based problem solving.
 
-> **Important:** SymPy verification applies only when a request matches one of the implemented deterministic adapters. General proofs, theory questions, matrix requests, and unsupported subjects are clearly treated as AI-generated unless a deterministic adapter returns a verified result.
+> **Important:** SymPy verification applies only when a request matches one of the implemented deterministic adapters. General proofs, theory questions, unsupported matrix formats, and unsupported subjects are treated as AI-generated unless a deterministic adapter returns a verified result.
 
 ## Current capabilities
 
@@ -12,7 +12,8 @@ Saad.AI is an academic mathematics assistant for university students. It combine
 | Equations | Polynomial equations and roots | SymPy when parsed successfully |
 | Differential equations | Selected first- and second-order ODE forms | SymPy for supported forms |
 | Numerical methods | Newton–Raphson, bisection, secant, Simpson, trapezoidal, Euler, RK4 | Deterministic numeric adapter |
-| Number theory | GCD, LCM, factorization, totient, congruences, CRT, selected theorems | SymPy / deterministic adapter |
+| Number theory | GCD, LCM, factorization, totient, congruences, CRT, selected theorems, modulo | SymPy / deterministic adapter |
+| Linear algebra | Determinants, eigenvalues/eigenvectors, inverses, ranks, transposes | Deterministic SymPy adapter |
 | Real analysis | Selected sequence, series, Taylor, and integral computations | SymPy for supported computations; AI for theory/proofs |
 | Differential geometry | Curvature, arc length, Frenet–Serret, fundamental forms | SymPy for supported parametric forms |
 | Hydro mechanics | Continuity, Bernoulli, Reynolds, flow rate, pressure, Torricelli | Deterministic formula adapter for supported prompts |

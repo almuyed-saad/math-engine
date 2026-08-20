@@ -44,6 +44,26 @@ class SympyEngineTests(unittest.TestCase):
         self.assertEqual(result["type"], "Bisection")
         self.assertIn("same sign", result["result"])
 
+    def test_matrix_eigenvalues_are_deterministic(self):
+        result = run_sympy("Find eigenvalues of matrix [[4,1],[2,3]]")
+        self.assertEqual(result["type"], "Eigenvalues")
+        self.assertIn("{5: 1, 2: 1}", result["result"])
+
+    def test_matrix_determinant_is_deterministic(self):
+        result = run_sympy("Find determinant of matrix [[4,1],[2,3]]")
+        self.assertEqual(result["type"], "MatrixDeterminant")
+        self.assertIn("det(A) = 10", result["result"])
+
+    def test_linear_congruence_is_deterministic(self):
+        result = run_sympy("Solve 14x ≡ 30 (mod 44)")
+        self.assertEqual(result["type"], "LinearCongruence")
+        self.assertIn("x ≡ [21, 43] (mod 44)", result["result"])
+
+    def test_remainder_is_deterministic(self):
+        result = run_sympy("Calculate 29 mod 5")
+        self.assertEqual(result["type"], "Modulo")
+        self.assertIn("29 mod 5 = 4", result["result"])
+
 
 if __name__ == "__main__":
     unittest.main()

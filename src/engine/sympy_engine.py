@@ -1159,14 +1159,69 @@ def run_sympy(problem: str) -> dict:
             except Exception:
                 pass  # safe fallback to AI
 
-        # ── 11. Matrix / Eigenvalues — delegate to AI ────────────────────
+        # ── 11. Matrix / Eigenvalues — deterministic SymPy adapter ────────
         elif any(k in p for k in ["matrix", "determinant", "eigenvalue",
-                                   "eigenvector", "det("]):
-            return {"type": "Matrix", "result": "matrix_detected", "latex": ""}
+                                   "eigenvector", "det(", "inverse matrix", "rank"]):
+            rows = re.findall(r"\[([^\[\]]+)\]", p)
+            if rows:
+                try:
+                    matrix_data = [
+                        [sp.Rational(value.strip()) for value in row.split(",")]
+                        for row in rows
+                    ]
+                    if len({len(row) for row in matrix_data}) != 1:
+                        raise ValueError("Matrix rows have different lengths")
+                    matrix = sp.Matrix(matrix_data)
 
-        # ── 9. Modular arithmetic — delegate to AI ────────────────────
+                    if "determinant" in p or "det(" in p:
+                        value = sp.factor(matrix.det())
+                        return {"type": "MatrixDeterminant", "result": f"det(A) = {value}", "latex": f"\\det(A)={sp.latex(value)}"}
+                    if "eigenvector" in p:
+                        value = matrix.eigenvects()
+                        return {"type": "Eigenvectors", "result": f"Eigenvectors: {value}", "latex": sp.latex(value)}
+                    if "eigenvalue" in p:
+                        value = matrix.eigenvals()
+                        return {"type": "Eigenvalues", "result": f"Eigenvalues: {value}", "latex": sp.latex(value)}
+                    if "inverse" in p:
+                        value = matrix.inv()
+                        return {"type": "MatrixInverse", "result": f"A^(-1) = {value}", "latex": sp.latex(value)}
+                    if "transpose" in p:
+                        value = matrix.T
+                        return {"type": "MatrixTranspose", "result": f"A^T = {value}", "latex": sp.latex(value)}
+                    if "rank" in p:
+                        value = matrix.rank()
+                        return {"type": "MatrixRank", "result": f"rank(A) = {value}", "latex": f"\\operatorname{{rank}}(A)={value}"}
+                    return {"type": "Matrix", "result": f"A = {matrix}", "latex": sp.latex(matrix)}
+                except Exception:
+                    pass
+
+        # ── 12. Modular arithmetic — deterministic adapter ───────────────
         elif "mod" in p or "congruence" in p:
-            return {"type": "NumberTheory", "result": "mod_detected", "latex": ""}
+            congruence = re.search(
+                r"([+-]?\d+)\s*x\s*(?:≡|=)\s*([+-]?\d+)\s*\(?(?:mod|modulo)\s*([+-]?\d+)\)?",
+                p,
+            )
+            if congruence:
+                a_val, b_val, modulus = (int(value) for value in congruence.groups())
+                gcd_value = math.gcd(a_val, modulus)
+                if b_val % gcd_value != 0:
+                    return {
+                        "type": "LinearCongruence",
+                        "result": f"No solution because gcd({a_val},{modulus})={gcd_value} does not divide {b_val}.",
+                        "latex": "\\text{No solution}",
+                    }
+                solutions = [x_val for x_val in range(modulus) if (a_val * x_val - b_val) % modulus == 0]
+                return {
+                    "type": "LinearCongruence",
+                    "result": f"{a_val}x ≡ {b_val} (mod {modulus}); solutions: {solutions}",
+                    "latex": "x \\equiv " + ", \\".join(str(x_val) for x_val in solutions) + f" \\pmod{{{modulus}}}",
+                }
+
+            remainder = re.search(r"([+-]?\d+)\s+mod\s+([+-]?\d+)", p)
+            if remainder:
+                left, right = (int(value) for value in remainder.groups())
+                value = left % right
+                return {"type": "Modulo", "result": f"{left} mod {right} = {value}", "latex": f"{left} \\bmod {right} = {value}"}
 
     except Exception:
         pass  # Silently fall back — AI handles it
