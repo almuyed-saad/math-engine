@@ -106,7 +106,9 @@ The active source uses hosted API providers rather than loading a local Hugging 
 
 Runtime configuration is centralized in `src/config.py`. Copy `.env.example` to `.env` for local development, or add the same variables as Hugging Face Space secrets. Provider timeouts, upload size, and PDF page limits are validated and clamped at startup so malformed deployment values cannot create unbounded resource usage.
 
-For production deployment, configure authentication or a per-user persistence scope before enabling Supabase chat history. Do not expose a shared service key or load unscoped chat rows in a public application.
+For production deployment, configure authentication or a per-user persistence scope before enabling Supabase chat history. Do not expose a shared service key or load unscoped chat rows in a public application. See [SECURITY.md](SECURITY.md) for the release checklist.
+
+Every push and pull request runs the deterministic test suite and Python compilation checks through [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Credits
 
