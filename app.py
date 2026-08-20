@@ -642,7 +642,8 @@ def ask_ai_streaming(problem: str, sympy_info: dict, history: list) -> str:
 # ════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown("### 🧠 Saad.AI")
-    st.caption("BSc Mathematics Engine")
+    st.caption("B.Sc. Mathematics Engine")
+    st.markdown("Deterministic calculations with AI-powered explanations.")
     st.divider()
 
     # ── New Chat Button ──────────────────────────────────────────
@@ -721,27 +722,12 @@ with st.sidebar:
     )
 
     st.divider()
-    st.markdown("**🔧 Engine**")
-    st.markdown("""
-    <div style="padding:0.2rem 0;">
-        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.2rem 0; color:#4b5563; font-size:0.75rem;">
-            <div style="width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 4px #22c55e; flex-shrink:0;"></div>
-            Groq Llama 3.3 70B
-        </div>
-        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.2rem 0; color:#4b5563; font-size:0.75rem;">
-            <div style="width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 4px #22c55e; flex-shrink:0;"></div>
-            SymPy — verified math
-        </div>
-        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.2rem 0; color:#4b5563; font-size:0.75rem;">
-            <div style="width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 4px #22c55e; flex-shrink:0;"></div>
-            Multiple providers · automatic fallback
-        </div>
-        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.2rem 0; color:#4b5563; font-size:0.75rem;">
-            <div style="width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 4px #22c55e; flex-shrink:0;"></div>
-            SymPy verified when supported
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("**🔧 How Saad.AI works**")
+    st.markdown(
+        "1. **SymPy** handles supported calculations exactly.\n"
+        "2. **AI providers** explain the result step by step.\n"
+        "3. The response is labeled when deterministic verification is available."
+    )
 
     st.divider()
     if st.button("🗑️ Clear Chat", use_container_width=True):
