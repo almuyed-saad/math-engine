@@ -1,3 +1,15 @@
-streamlit
-transformers
-torch
+# Core application
+streamlit>=1.40,<2
+requests>=2.32,<3
+
+# Deterministic mathematics and graphing
+sympy>=1.13,<2
+numpy>=2.0,<3
+matplotlib>=3.9,<4
+
+# Image/PDF upload support
+Pillow>=10,<13
+PyMuPDF>=1.24,<2
+
+# Optional: keep this file focused on the active API-backed runtime.
+# Transformers and torch were removed because the current app does not load a local Hugging Face model.

@@ -1,119 +1,109 @@
-# 🧮 SAAD AI — B.Sc. Mathematics Engine
-### AI-Powered Academic Math Solver | SUST Department of Mathematics
+# Saad.AI — B.Sc. Mathematics Engine
 
----
+Saad.AI is an academic mathematics assistant for university students. It combines a deterministic **SymPy computation engine** with configurable AI providers for explanations, proofs, theory questions, graph descriptions, and image/PDF-based problem solving.
 
-## 🔗 [▶ LIVE DEMO — Click Here to Use](https://huggingface.co/spaces/saad-sust/SAAD_AI)
-> **https://huggingface.co/spaces/saad-sust/SAAD_AI**
+> **Important:** SymPy verification applies only when a request matches one of the implemented deterministic adapters. General proofs, theory questions, matrix requests, and unsupported subjects are clearly treated as AI-generated unless a deterministic adapter returns a verified result.
 
----
+## Current capabilities
 
-## What is SAAD AI?
+| Area | Examples | Verification mode |
+|---|---|---|
+| Calculus | Derivatives, integrals, limits | SymPy when parsed successfully |
+| Equations | Polynomial equations and roots | SymPy when parsed successfully |
+| Differential equations | Selected first- and second-order ODE forms | SymPy for supported forms |
+| Numerical methods | Newton–Raphson, bisection, secant, Simpson, trapezoidal, Euler, RK4 | Deterministic numeric adapter |
+| Number theory | GCD, LCM, factorization, totient, congruences, CRT, selected theorems | SymPy / deterministic adapter |
+| Real analysis | Selected sequence, series, Taylor, and integral computations | SymPy for supported computations; AI for theory/proofs |
+| Differential geometry | Curvature, arc length, Frenet–Serret, fundamental forms | SymPy for supported parametric forms |
+| Hydro mechanics | Continuity, Bernoulli, Reynolds, flow rate, pressure, Torricelli | Deterministic formula adapter for supported prompts |
+| Graphing | Explicit requests to plot or graph a function | Matplotlib rendering |
+| Attachments | JPG, PNG, WEBP, and PDF questions | Vision provider; deterministic verification when extractable |
 
-An AI-powered mathematics assistant designed for university-level problem solving. Built by a B.Sc. Mathematics student at SUST, Bangladesh — from scratch, using real machine learning tools.
+The engine is intentionally not presented as a universal proof checker. For questions that cannot be deterministically parsed, the application sends the prompt to the configured AI provider and labels the result as AI-generated where appropriate.
 
-It does not just give answers. It explains every step, cites the theorems used, and formats solutions in clean academic style.
+## Architecture
 
----
+The current stabilization refactor keeps Streamlit as the user interface while separating the main responsibilities:
 
-## What It Can Solve
+```text
+math-engine/
+├── app.py                         # Streamlit UI, session flow, and graph rendering
+├── src/
+│   ├── engine/
+│   │   └── sympy_engine.py        # Deterministic symbolic and numeric adapters
+│   └── services/
+│       └── ai.py                  # Provider rotation, vision, uploads, verification
+├── tests/
+│   └── test_engine.py             # Deterministic engine regression tests
+├── requirements.txt               # Runtime dependencies actually used by the app
+└── README.md
+```
 
-| Topic | Examples |
-|---|---|
-| Algebra | Quadratic, cubic, polynomial equations |
-| Calculus | Derivatives, integrals, chain rule, limits |
-| Real Analysis | Epsilon-delta proofs, convergence tests |
-| Group Theory | Normal subgroups, cosets, index proofs |
-| Number Theory | Divisibility, Fermat's theorem, congruences |
-| Complex Analysis | Cauchy-Riemann equations, Residue theorem |
-| Word Problems | Applied math with full reasoning |
+The next recommended phase is to split the remaining UI, persistence, and plotting concerns into their own modules and add provider mocks and upload fixtures.
 
----
-
-## Tech Stack
-
-| Component | Tool |
-|---|---|
-| Language Model | SmolLM2-1.7B-Instruct |
-| UI | Streamlit |
-| ML Framework | HuggingFace Transformers |
-| Deployment | HuggingFace Spaces (Free) |
-| Fine-tuning | Unsloth + LoRA on Kaggle GPU |
-| Language | Python 3.10+ |
-
----
-
-## Run Locally
+## Run locally
 
 ```bash
 git clone https://github.com/almuyed-saad/math-engine.git
-cd SAAD-AI-Math
+cd math-engine
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Open `http://localhost:8501` in your browser.
+Open `http://localhost:8501` in a browser.
 
----
+Run the deterministic regression tests with:
 
-## Project Structure
-
-```
-SAAD-AI-Math/
-├── app.py
-├── requirements.txt
-└── README.md
+```bash
+python -m unittest discover -s tests -v
 ```
 
----
+## Configuration
 
-## Example Problems
+AI providers are optional for deterministic SymPy requests but required for explanations and unsupported subjects. Configure provider credentials through environment variables or Hugging Face Space secrets:
 
+```text
+GROQ_API_KEY_1
+GROQ_API_KEY_2
+GROQ_API_KEY_3
+GEMINI_API_KEY_1
+GEMINI_API_KEY_2
+GEMINI_API_KEY_3
+GEMINI_API_KEY_4
+OPENROUTER_API_KEY
 ```
-solve x^2 + 5x + 6 = 0
-derivative of (x^2 + 1)^3
-integrate x^2 + 3x + 2 dx
-prove that sqrt(2) is irrational
-prove n^3 - n is divisible by 6
-solve 3x = 7 (mod 11)
-prove a subgroup of index 2 is normal
-epsilon-delta proof for limit of 2x as x approaches 3
+
+Supabase persistence is now **opt-in and scope-limited**. Set the following only after creating a `scope_id` column and enabling row-level security policies that restrict access to the intended user or session scope:
+
+```text
+SUPABASE_URL
+SUPABASE_KEY
+SUPABASE_SCOPE_ID
 ```
 
----
+Without `SUPABASE_SCOPE_ID`, the application keeps chat history in the current Streamlit session and does not load a global chat table.
 
-## How It Works
+## Example prompts
 
-1. You enter a math problem in the chat
-2. A strict academic system prompt structures the request
-3. SmolLM2-1.7B generates a step-by-step solution
-4. Response is rendered with LaTeX in the browser
+```text
+Find the derivative of x^3 + 5x^2 - 3x + 7
+Integrate sin(x) * e^x dx
+Find limit of sin(x)/x as x -> 0
+Apply Newton-Raphson to x^3 - 2x - 5 = 0, x0=2, 3 iterations
+Apply bisection of x^3 - x on [0, 2], 4 iterations
+Find gcd of 84 and 30
+Solve 14x ≡ 30 (mod 44) using Euclidean algorithm
+Plot y = x^2 - 4 from -3 to 3
+```
 
-Every solution follows this structure:
+## Deployment notes
 
-- **Definitions and Prerequisites**
-- **Step-by-Step Proof or Solution**
-- **Conclusion**
+The active source uses hosted API providers rather than loading a local Hugging Face model at runtime. The dependency list therefore excludes the previously declared `transformers` and `torch` packages, which were not used by the current application and added unnecessary deployment weight.
 
----
+For production deployment, configure authentication or a per-user persistence scope before enabling Supabase chat history. Do not expose a shared service key or load unscoped chat rows in a public application.
 
-## About the Developer
+## Credits
 
-**Saad**
-
-B.Sc. Mathematics — Shahjalal University of Science and Technology (SUST), Sylhet, Bangladesh
-
-Built this project independently as a first AI project — from fine-tuning LLMs on Kaggle to deploying a full web application with a public URL.
-
----
-
-## Acknowledgements
-
-- [HuggingFace](https://huggingface.co) — Model hosting and free deployment
-- [Unsloth](https://github.com/unslothai/unsloth) — Fast LLM fine-tuning
-- [Streamlit](https://streamlit.io) — UI framework
-- SUST Department of Mathematics
-
----
-
-⭐ Star this repo if it helped you!
+The project was created by Saad for B.Sc. Mathematics students at Shahjalal University of Science and Technology. It uses [Streamlit](https://streamlit.io), [SymPy](https://www.sympy.org), [Matplotlib](https://matplotlib.org), and hosted AI provider APIs.
