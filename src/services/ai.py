@@ -1,17 +1,46 @@
 """AI provider integrations and file/vision processing for Saad.AI."""
 
 import re
+import time
 import requests
 
 from src.config import settings
 from src.engine.sympy_engine import run_sympy
+
+
+def _post_with_retry(url: str, *, headers: dict, json: dict, timeout: float | None = None, attempts: int = 2):
+    """POST with a small bounded retry budget for transient provider failures."""
+    timeout = timeout or settings.provider_timeout_seconds
+    attempts = max(1, min(attempts, 3))
+
+    for attempt in range(attempts):
+        try:
+            response = requests.post(url, headers=headers, json=json, timeout=timeout)
+        except requests.exceptions.Timeout:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(min(0.5 * (2**attempt), 2.0))
+            continue
+
+        retryable = response.status_code == 429 or response.status_code >= 500
+        if retryable and attempt < attempts - 1:
+            retry_after = response.headers.get("Retry-After", "")
+            try:
+                delay = min(max(float(retry_after), 0.0), 2.0)
+            except ValueError:
+                delay = min(0.5 * (2**attempt), 2.0)
+            time.sleep(delay)
+            continue
+        return response
+
+    raise RuntimeError("Provider request exhausted retry budget")
 
 def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
 
     # ── Multi-provider auto-rotation ────────────────────────────────
     # Try each provider in order — skip if key missing or 429
     def try_groq(key, messages):
-        resp = requests.post(
+        resp = _post_with_retry(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={"model": "llama-3.3-70b-versatile", "messages": messages,
@@ -36,7 +65,7 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
         }
         # Try 2.0-flash first, fall back to 1.5-flash if model not available
         for model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
-            resp = requests.post(
+            resp = _post_with_retry(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
                 headers={"Content-Type": "application/json"},
                 json=payload,
@@ -57,7 +86,7 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
         raise requests.exceptions.HTTPError("Both gemini-2.0-flash and gemini-1.5-flash returned 404")
 
     def try_openrouter(key, messages):
-        resp = requests.post(
+        resp = _post_with_retry(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={"model": "deepseek/deepseek-r1:free",
@@ -510,7 +539,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
                 continue
             for model in groq_vision_models:
                 try:
-                    resp = requests.post(
+                    resp = _post_with_retry(
                         "https://api.groq.com/openai/v1/chat/completions",
                         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                         json={
@@ -560,7 +589,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
             continue
         for model in gemini_models:
             try:
-                resp = requests.post(
+                resp = _post_with_retry(
                     f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
                     headers={"Content-Type": "application/json"},
                     json={
@@ -608,7 +637,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
             ]
             for model in or_models:
                 try:
-                    resp = requests.post(
+                    resp = _post_with_retry(
                         "https://openrouter.ai/api/v1/chat/completions",
                         headers={"Authorization": f"Bearer {or_key}", "Content-Type": "application/json"},
                         json={

@@ -81,9 +81,10 @@ Supabase persistence is now **opt-in and scope-limited**. Set the following only
 SUPABASE_URL
 SUPABASE_KEY
 SUPABASE_SCOPE_ID
+ENABLE_SUPABASE_PERSISTENCE=false
 ```
 
-Without `SUPABASE_SCOPE_ID`, the application keeps chat history in the current Streamlit session and does not load a global chat table.
+Persistence remains disabled unless `ENABLE_SUPABASE_PERSISTENCE=true`, a non-empty scope identifier is supplied, and the database is configured with row-level security. Without all of those conditions, the application keeps chat history in the current Streamlit session and does not load a global chat table.
 
 ## Example prompts
 
