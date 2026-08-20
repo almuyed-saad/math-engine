@@ -1,6 +1,6 @@
 # Saad.AI — B.Sc. Mathematics Engine
 
-Saad.AI is an academic mathematics assistant for university students. It combines a deterministic **SymPy computation engine** with configurable AI providers for explanations, proofs, theory questions, graph descriptions, and image/PDF-based problem solving.
+Saad.AI is an academic mathematics assistant for university students. It combines a deterministic **SymPy computation engine** with configurable AI providers for explanations, proofs, theory questions, graph descriptions, and image/PDF-based problem solving. See [PORTFOLIO.md](PORTFOLIO.md) for the project story and demo flow.
 
 > **Important:** SymPy verification applies only when a request matches one of the implemented deterministic adapters. General proofs, theory questions, unsupported matrix formats, and unsupported subjects are treated as AI-generated unless a deterministic adapter returns a verified result.
 
