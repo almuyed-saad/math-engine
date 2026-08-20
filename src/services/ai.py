@@ -35,6 +35,27 @@ def _post_with_retry(url: str, *, headers: dict, json: dict, timeout: float | No
 
     raise RuntimeError("Provider request exhausted retry budget")
 
+def _deterministic_fallback(sympy_info: dict, reason: str = "") -> str:
+    """Return a useful verified answer when external explanation APIs fail."""
+    result = sympy_info.get("result")
+    latex = sympy_info.get("latex") or ""
+    method = sympy_info.get("type") or "Deterministic computation"
+    if not result:
+        return ""
+
+    reason_line = ""
+    if reason:
+        reason_line = f"\n\n_AI explanation unavailable: {reason}. The computation above is still deterministic._"
+    latex_block = f"\n\n**Mathematical form:**\n\n$${latex}$$" if latex else ""
+    return (
+        "✅ **SymPy Verified**\n\n"
+        f"**Method:** {method}\n\n"
+        f"**Computed result:**\n\n`{result}`"
+        f"{latex_block}"
+        f"{reason_line}"
+    )
+
+
 def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
 
     # ── Multi-provider auto-rotation ────────────────────────────────
@@ -110,12 +131,12 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
 
     # Check at least one key exists
     if not any(key for _, key, _ in providers):
+        fallback = _deterministic_fallback(sympy_info, "no AI provider keys are configured")
+        if fallback:
+            return fallback
         return (
-            "⚠️ **No API keys set.**\n\n"
-            "Add these secrets in HF Space → Settings → Secrets:\n"
-            "`GROQ_API_KEY_1`, `GROQ_API_KEY_2`, `GROQ_API_KEY_3`\n"
-            "`GEMINI_API_KEY_1`, `GEMINI_API_KEY_2`\n"
-            "`OPENROUTER_API_KEY`"
+            "⚠️ **No AI provider keys are configured.**\n\n"
+            "Add a provider secret in the Hugging Face Space settings to enable explanations."
         )
 
     # Build sympy context if we have a verified result
@@ -428,13 +449,14 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
             last_error = f"⚠️ {provider_name} error: {str(e)}"
             continue
 
-    # All providers exhausted
+    # All providers exhausted. Preserve deterministic value if one exists.
+    fallback = _deterministic_fallback(sympy_info, last_error or "all providers failed")
+    if fallback:
+        return fallback
     return (
-        f"⚠️ **All providers failed.**\n\n"
-        f"Last error: `{last_error}`\n\n"
-        "Tried: 3×Groq → 4×Gemini → OpenRouter. All failed or rate-limited.\n"
-        "If you see `API not enabled` — visit [aistudio.google.com](https://aistudio.google.com/app/apikey) and enable the Generative Language API for your account.\n"
-        "If you see `quota exceeded` — wait 60 seconds (rate limit) or until midnight Pacific (daily limit)."
+        "⚠️ **AI explanation unavailable.**\n\n"
+        f"Last provider error: `{last_error or 'unknown provider error'}`\n\n"
+        "Check the provider secret and quota in the Hugging Face Space settings."
     )
 
 

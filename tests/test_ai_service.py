@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from src.services.ai import _post_with_retry
+from src.services.ai import _deterministic_fallback, _post_with_retry
 
 
 class FakeResponse:
@@ -11,6 +11,18 @@ class FakeResponse:
 
 
 class ProviderRetryTests(unittest.TestCase):
+    def test_deterministic_fallback_preserves_verified_result(self):
+        answer = _deterministic_fallback(
+            {"type": "Derivative", "result": "3*x**2", "latex": "3x^2"},
+            "provider quota exceeded",
+        )
+        self.assertIn("SymPy Verified", answer)
+        self.assertIn("3*x**2", answer)
+        self.assertIn("provider quota exceeded", answer)
+
+    def test_deterministic_fallback_is_empty_without_result(self):
+        self.assertEqual(_deterministic_fallback({"type": "general", "result": None}), "")
+
     @patch("src.services.ai.time.sleep")
     @patch("src.services.ai.requests.post")
     def test_retries_transient_server_failure(self, post, sleep):
