@@ -28,6 +28,7 @@ matplotlib.use('Agg')  # non-interactive backend — required on HuggingFace Spa
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.config import settings
 from src.engine.sympy_engine import run_sympy
 from src.services.ai import ask_ai, ask_gemini_vision, handle_uploaded_file
 
@@ -422,11 +423,11 @@ if "show_uploader" not in st.session_state:
 # ════════════════════════════════════════════════════════════════════
 # SUPABASE — Persistent chat history
 # ════════════════════════════════════════════════════════════════════
-_SUPA_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-_SUPA_KEY = os.environ.get("SUPABASE_KEY", "")
+_SUPA_URL = settings.supabase_url
+_SUPA_KEY = settings.supabase_key
 # Remote persistence is opt-in and must be scoped. Without a scope identifier,
 # chats remain in the current Streamlit session and are never loaded globally.
-_SUPA_SCOPE_ID = os.environ.get("SUPABASE_SCOPE_ID", "").strip()
+_SUPA_SCOPE_ID = settings.supabase_scope_id
 
 def _supa_headers():
     return {
@@ -1091,7 +1092,7 @@ if problem and problem != st.session_state.last_submitted:
         file_mime  = st.session_state.pending_file_mime
 
         # ── Validate size (5 MB limit) ────────────────────────────────
-        MAX_FILE_SIZE = 5 * 1024 * 1024
+        MAX_FILE_SIZE = settings.max_upload_bytes
         if len(file_bytes) > MAX_FILE_SIZE:
             st.session_state.pending_file_bytes = None
             st.session_state.pending_file_name  = None

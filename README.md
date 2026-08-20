@@ -102,6 +102,8 @@ Plot y = x^2 - 4 from -3 to 3
 
 The active source uses hosted API providers rather than loading a local Hugging Face model at runtime. The dependency list therefore excludes the previously declared `transformers` and `torch` packages, which were not used by the current application and added unnecessary deployment weight.
 
+Runtime configuration is centralized in `src/config.py`. Copy `.env.example` to `.env` for local development, or add the same variables as Hugging Face Space secrets. Provider timeouts, upload size, and PDF page limits are validated and clamped at startup so malformed deployment values cannot create unbounded resource usage.
+
 For production deployment, configure authentication or a per-user persistence scope before enabling Supabase chat history. Do not expose a shared service key or load unscoped chat rows in a public application.
 
 ## Credits

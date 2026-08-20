@@ -1,9 +1,9 @@
 """AI provider integrations and file/vision processing for Saad.AI."""
 
-import os
 import re
 import requests
 
+from src.config import settings
 from src.engine.sympy_engine import run_sympy
 
 def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
@@ -16,7 +16,7 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={"model": "llama-3.3-70b-versatile", "messages": messages,
                   "max_tokens": 2048, "temperature": 0.15, "top_p": 0.9},
-            timeout=60
+            timeout=settings.provider_timeout_seconds
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
@@ -40,7 +40,7 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
                 headers={"Content-Type": "application/json"},
                 json=payload,
-                timeout=60
+                timeout=settings.provider_timeout_seconds
             )
             if resp.status_code == 404:
                 continue  # model not found — try next model
@@ -62,21 +62,21 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={"model": "deepseek/deepseek-r1:free",
                   "messages": messages, "max_tokens": 2048, "temperature": 0.15},
-            timeout=60
+            timeout=settings.provider_timeout_seconds
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
 
     # All providers in rotation order
     providers = [
-        ("Groq-1",      os.environ.get("GROQ_API_KEY_1",""),      try_groq),
-        ("Groq-2",      os.environ.get("GROQ_API_KEY_2",""),      try_groq),
-        ("Groq-3",      os.environ.get("GROQ_API_KEY_3",""),      try_groq),
-        ("Gemini-1",    os.environ.get("GEMINI_API_KEY_1",""),    try_gemini),
-        ("Gemini-2",    os.environ.get("GEMINI_API_KEY_2",""),    try_gemini),
-        ("Gemini-3",    os.environ.get("GEMINI_API_KEY_3",""),    try_gemini),
-        ("Gemini-4",    os.environ.get("GEMINI_API_KEY_4",""),    try_gemini),
-        ("OpenRouter",  os.environ.get("OPENROUTER_API_KEY",""),  try_openrouter),
+        ("Groq-1",      settings.groq_api_keys[0], try_groq),
+        ("Groq-2",      settings.groq_api_keys[1], try_groq),
+        ("Groq-3",      settings.groq_api_keys[2], try_groq),
+        ("Gemini-1",    settings.gemini_api_keys[0], try_gemini),
+        ("Gemini-2",    settings.gemini_api_keys[1], try_gemini),
+        ("Gemini-3",    settings.gemini_api_keys[2], try_gemini),
+        ("Gemini-4",    settings.gemini_api_keys[3], try_gemini),
+        ("OpenRouter",  settings.openrouter_api_key, try_openrouter),
     ]
 
     # Check at least one key exists
@@ -434,7 +434,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             # Render all pages (up to 4) as one tall PNG
             imgs = []
-            for page_num in range(min(len(doc), 6)):
+            for page_num in range(min(len(doc), settings.max_pdf_pages)):
                 pix = doc[page_num].get_pixmap(matrix=fitz.Matrix(3, 3))  # 3x zoom for crisp text
                 imgs.append(pix.tobytes("png"))
             doc.close()
@@ -500,11 +500,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
     # ── PROVIDER 1: Groq vision (images only — not PDFs) ─────────────
     # Groq free tier: ~100 req/min, much more generous than Gemini's 15/min
     if not is_pdf:
-        groq_keys = [
-            os.environ.get("GROQ_API_KEY_1", ""),
-            os.environ.get("GROQ_API_KEY_2", ""),
-            os.environ.get("GROQ_API_KEY_3", ""),
-        ]
+        groq_keys = settings.groq_api_keys
         groq_vision_models = [
             "meta-llama/llama-4-scout-17b-16e-instruct",
             "llama-3.2-11b-vision-preview",
@@ -530,7 +526,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
                             "max_tokens": 2048,
                             "temperature": 0.15
                         },
-                        timeout=60
+                        timeout=settings.provider_timeout_seconds
                     )
                     if resp.status_code == 200:
                         return resp.json()["choices"][0]["message"]["content"]
@@ -557,12 +553,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
 
     # ── PROVIDER 2: Gemini (images + PDFs) ───────────────────────────
     # 15 req/min, 1500 req/day per key — use as fallback
-    gemini_keys = [
-        os.environ.get("GEMINI_API_KEY_1", ""),
-        os.environ.get("GEMINI_API_KEY_2", ""),
-        os.environ.get("GEMINI_API_KEY_3", ""),
-        os.environ.get("GEMINI_API_KEY_4", ""),
-    ]
+    gemini_keys = settings.gemini_api_keys
     gemini_models = ["gemini-2.0-flash", "gemini-1.5-flash"]
     for i, key in enumerate(gemini_keys):
         if not key.strip():
@@ -579,7 +570,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
                         ]}],
                         "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.15}
                     },
-                    timeout=60
+                    timeout=settings.provider_timeout_seconds
                 )
                 if resp.status_code == 200:
                     candidates = resp.json().get("candidates", [])
@@ -609,7 +600,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
 
     # ── PROVIDER 3: OpenRouter free vision models (images only) ───────
     if not is_pdf:
-        or_key = os.environ.get("OPENROUTER_API_KEY", "")
+        or_key = settings.openrouter_api_key
         if or_key.strip():
             or_models = [
                 "meta-llama/llama-3.2-11b-vision-instruct:free",
@@ -632,7 +623,7 @@ def ask_gemini_vision(image_b64: str, mime_type: str, user_note: str) -> str:
                             }],
                             "max_tokens": 2048
                         },
-                        timeout=60
+                        timeout=settings.provider_timeout_seconds
                     )
                     if resp.status_code == 200:
                         return resp.json()["choices"][0]["message"]["content"]
@@ -682,7 +673,7 @@ def handle_uploaded_file(uploaded_file, user_note: str) -> str:
     import base64
 
     # ── Validate size ────────────────────────────────────────────────
-    MAX_SIZE = 5 * 1024 * 1024  # 5MB
+    MAX_SIZE = settings.max_upload_bytes
     file_bytes = uploaded_file.read()
     if len(file_bytes) == 0:
         return "⚠️ The uploaded file is empty. Please try again."
