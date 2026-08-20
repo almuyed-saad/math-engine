@@ -792,10 +792,10 @@ with st.sidebar:
     }
 
     selected = st.selectbox(
-        "Load example:",
+        "Try an example problem",
         list(examples.keys()),
         key="example_select",
-        label_visibility="collapsed"
+        help="Choose a prompt to place in the chat input.",
     )
 
     st.divider()
@@ -986,7 +986,18 @@ for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
-            with st.expander("📋 Copy"):
+            if msg.get("verified"):
+                st.caption("✓ SymPy verified computation")
+            else:
+                st.caption("AI-generated explanation — deterministic verification was unavailable for this request.")
+            with st.expander("Solution tools"):
+                st.download_button(
+                    "Download Markdown",
+                    data=msg["content"],
+                    file_name=f"saad-ai-solution-{i + 1}.md",
+                    mime="text/markdown",
+                    key=f"download_solution_{i}",
+                )
                 st.code(msg["content"], language=None)
 
 # ════════════════════════════════════════════════════════════════════
@@ -1043,10 +1054,10 @@ with attach_col:
 # ── Real file uploader — only shown when toggled on ──────────────────
 if st.session_state.show_uploader and not _pending:
     uploaded = st.file_uploader(
-        "Upload image or PDF",
+        "Upload an image or PDF",
         type=["jpg", "jpeg", "png", "webp", "pdf"],
-        label_visibility="collapsed",
-        key="main_uploader"
+        help="Maximum size is controlled by MAX_UPLOAD_BYTES.",
+        key="main_uploader",
     )
     if uploaded is not None:
         _fkey = f"{uploaded.size}_{uploaded.type}_{uploaded.name}"
@@ -1151,7 +1162,11 @@ if problem and problem != st.session_state.last_submitted:
             "role": "user",
             "content": f"📎 {file_name} — {problem}"
         })
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+            "verified": "SymPy Verified" in answer,
+        })
         save_current_chat()
         st.stop()
 
@@ -1182,7 +1197,11 @@ if problem and problem != st.session_state.last_submitted:
         if not st.session_state.current_chat_id:
             new_chat()
         st.session_state.messages.append({"role": "user", "content": f"📎 {st.session_state.attached_file_name} — {problem}"})
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+            "verified": "SymPy Verified" in answer,
+        })
         save_current_chat()
         st.stop()
 
@@ -1234,13 +1253,34 @@ if problem and problem != st.session_state.last_submitted:
             answer = ask_ai_streaming(problem, sympy_result, st.session_state.messages)
             plot_graph(problem, sympy_result)
 
-        # Copy — click to expand, then use built-in copy button
-        with st.expander("📋 Copy"):
+        if is_casual:
+            st.caption("AI response")
+        elif sympy_result.get("result") and sympy_result.get("result") not in ("matrix_detected", "mod_detected"):
+            st.caption("✓ SymPy verified computation")
+        else:
+            st.caption("AI-generated explanation — deterministic verification was unavailable for this request.")
+
+        with st.expander("Solution tools"):
+            st.download_button(
+                "Download Markdown",
+                data=answer,
+                file_name="saad-ai-solution.md",
+                mime="text/markdown",
+                key="download_current_solution",
+            )
             st.code(answer, language=None)
 
     # Save to history
     if not st.session_state.current_chat_id:
         new_chat()  # create chat ID BEFORE appending — avoids wiping messages
     st.session_state.messages.append({"role": "user", "content": problem})
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": answer,
+        "verified": bool(
+            not is_casual
+            and sympy_result.get("result")
+            and sympy_result.get("result") not in ("matrix_detected", "mod_detected")
+        ) if not is_casual else False,
+    })
     save_current_chat()
