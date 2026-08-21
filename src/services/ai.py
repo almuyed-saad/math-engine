@@ -56,6 +56,23 @@ def _deterministic_fallback(sympy_info: dict, reason: str = "") -> str:
     )
 
 
+def _normalize_verified_answer(ai_response: str, latex: str, result: object) -> str:
+    """Keep one canonical, standalone LaTeX final answer in verified responses."""
+    if not result or result in ("matrix_detected", "mod_detected") or not latex:
+        return ai_response
+
+    # Providers occasionally include their own final-answer block even though
+    # the prompt asks for one. Remove that block before appending the verified
+    # SymPy value, preventing duplicated or concatenated equations in the UI.
+    cleaned = re.sub(
+        r"(?ims)(?:^|\n)\s*(?:#{1,6}\s*)?(?:✅\s*)?\*{0,2}Final\s*Answer\*{0,2}\s*:?.*",
+        "",
+        ai_response,
+    ).rstrip()
+    verified_line = f"\n\n✅ **Final Answer:**\n\n$$\\boxed{{{latex}}}$$"
+    return cleaned + verified_line
+
+
 def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
 
     # ── Multi-provider auto-rotation ────────────────────────────────
@@ -407,23 +424,11 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
 
     # ── Permanent fix: force correct final answer from SymPy ────────
     def enforce_verified_answer(ai_response: str) -> str:
-        """Remove AI final answer, replace with SymPy verified one."""
-        result = sympy_info.get("result", "")
-        latex  = sympy_info.get("latex", "")
-        # Only enforce if SymPy has a real computed result
-        if (not result or
-                result in (None, "matrix_detected", "mod_detected") or
-                not latex):
-            return ai_response  # theory question — leave AI response untouched
-        # Remove everything after last "✅" or "Final Answer"
-        cleaned = re.sub(
-            r'(✅\s*\*{0,2}Final\s*Answer\*{0,2}.*|✅[^\n]*$)',
-            "", ai_response,
-            flags=re.DOTALL | re.IGNORECASE
-        ).rstrip()
-        # Append our verified final answer
-        verified_line = f"\n\n✅ **Final Answer:** $$\\boxed{{{latex}}}$$"
-        return cleaned + verified_line
+        return _normalize_verified_answer(
+            ai_response,
+            sympy_info.get("latex", ""),
+            sympy_info.get("result", ""),
+        )
 
     # Try each provider in order — auto-rotate on 429 or error
     last_error = ""
