@@ -18,7 +18,7 @@ class ProviderRetryTests(unittest.TestCase):
         )
         self.assertIn("SymPy Verified", answer)
         self.assertIn("3*x**2", answer)
-        self.assertIn("provider quota exceeded", answer)
+        self.assertIn("AI explanation unavailable right now", answer)
 
     def test_deterministic_fallback_is_empty_without_result(self):
         self.assertEqual(_deterministic_fallback({"type": "general", "result": None}), "")

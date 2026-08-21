@@ -45,7 +45,7 @@ def _deterministic_fallback(sympy_info: dict, reason: str = "") -> str:
 
     reason_line = ""
     if reason:
-        reason_line = f"\n\n_AI explanation unavailable: {reason}. The computation above is still deterministic._"
+        reason_line = "\n\n_AI explanation unavailable right now. The computation above is still deterministic._"
     latex_block = f"\n\n**Mathematical form:**\n\n$${latex}$$" if latex else ""
     return (
         "✅ **SymPy Verified**\n\n"
