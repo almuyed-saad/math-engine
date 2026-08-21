@@ -637,6 +637,16 @@ def ask_ai_streaming(problem: str, sympy_info: dict, history: list) -> str:
     return full_response
 
 
+def _has_ai_explanation(answer: str) -> bool:
+    """Return False for deterministic-only or explicit provider-failure responses."""
+    normalized = (answer or "").lstrip()
+    return bool(normalized) and not normalized.startswith((
+        "✅ **SymPy Verified**",
+        "⚠️ **AI explanation unavailable",
+        "⚠️ **No AI provider",
+    ))
+
+
 # ════════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ════════════════════════════════════════════════════════════════════
@@ -644,6 +654,12 @@ with st.sidebar:
     st.markdown("### 🧠 Saad.AI")
     st.caption("B.Sc. Mathematics Engine")
     st.markdown("Deterministic calculations with AI-powered explanations.")
+    if settings.any_text_provider_enabled:
+        st.success("AI explanations enabled")
+        st.caption("Providers explain the verified SymPy result step by step.")
+    else:
+        st.info("SymPy-only mode")
+        st.caption("Deterministic calculations work; add a provider secret for AI explanations.")
     st.divider()
 
     # ── New Chat Button ──────────────────────────────────────────
@@ -908,8 +924,10 @@ for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"], avatar=avatar):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
-            if msg.get("verified"):
-                st.caption("✓ SymPy verified computation")
+            if msg.get("verified") and _has_ai_explanation(msg["content"]):
+                st.caption("✓ AI explanation · SymPy verified computation")
+            elif msg.get("verified"):
+                st.caption("✓ SymPy verified · AI explanation unavailable for this response")
             else:
                 st.caption("AI-generated explanation — deterministic verification was unavailable for this request.")
             with st.expander("Solution tools"):
@@ -1181,7 +1199,10 @@ if problem and problem != st.session_state.last_submitted:
         if is_casual:
             st.caption("AI response")
         elif sympy_result.get("result") and sympy_result.get("result") not in ("matrix_detected", "mod_detected"):
-            st.caption("✓ SymPy verified computation")
+            if _has_ai_explanation(answer):
+                st.caption("✓ AI explanation · SymPy verified computation")
+            else:
+                st.caption("✓ SymPy verified · AI explanation unavailable for this response")
         else:
             st.caption("AI-generated explanation — deterministic verification was unavailable for this request.")
 
