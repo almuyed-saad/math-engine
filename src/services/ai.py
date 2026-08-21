@@ -64,7 +64,7 @@ def ask_ai(problem: str, sympy_info: dict, history: list) -> str:
         resp = _post_with_retry(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-            json={"model": "llama-3.3-70b-versatile", "messages": messages,
+            json={"model": "openai/gpt-oss-20b", "messages": messages,
                   "max_tokens": 2048, "temperature": 0.15, "top_p": 0.9},
             timeout=settings.provider_timeout_seconds
         )
