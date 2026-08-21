@@ -1,69 +1,166 @@
 # Saad.AI — B.Sc. Mathematics Engine
 
-Saad.AI is an academic mathematics assistant for university students. It combines a deterministic **SymPy computation engine** with configurable AI providers for explanations, proofs, theory questions, graph descriptions, and image/PDF-based problem solving. See [PORTFOLIO.md](PORTFOLIO.md) for the project story and demo flow.
+[![CI](https://github.com/almuyed-saad/math-engine/actions/workflows/ci.yml/badge.svg?branch=refactor%2Fstabilize-saadai)](https://github.com/almuyed-saad/math-engine/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Hugging%20Face-yellow?logo=huggingface)](https://saad-sust-saad-ai.hf.space)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.40%2B-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 
-> **Important:** SymPy verification applies only when a request matches one of the implemented deterministic adapters. General proofs, theory questions, unsupported matrix formats, and unsupported subjects are treated as AI-generated unless a deterministic adapter returns a verified result.
+**Saad.AI** is a portfolio-focused academic mathematics assistant for B.Sc. mathematics students. It combines a deterministic [SymPy](https://www.sympy.org/) computation engine with hosted AI providers that explain results in a clear, step-by-step format.
 
-## Current capabilities
+> **Live application:** [saad-sust-saad-ai.hf.space](https://saad-sust-saad-ai.hf.space)
+>
+> **Repository branch:** [`refactor/stabilize-saadai`](https://github.com/almuyed-saad/math-engine/tree/refactor/stabilize-saadai)
 
-| Area | Examples | Verification mode |
+The project is designed around a simple principle: **use deterministic mathematics whenever a problem can be parsed reliably, and use AI for explanation, theory, proofs, and unsupported requests.** This makes the application more transparent than an AI-only chatbot while keeping the experience conversational and accessible.
+
+## Why this project is technically interesting
+
+Saad.AI demonstrates how a mathematical assistant can combine structured computation with natural-language interaction without treating every answer as equally reliable. For supported problem types, the application produces a result through SymPy or a deterministic numerical adapter and labels the response as verified. For theory questions, proofs, broad explanations, and requests outside the deterministic adapters, the application delegates explanation to a configured provider and clearly identifies when deterministic verification is unavailable.
+
+The portfolio edition intentionally avoids unnecessary enterprise infrastructure. Chat history is session-local, there is no database or authentication layer, and deployment requires only a Streamlit-compatible host plus provider secrets. This keeps the project easy to inspect, run, and demonstrate while preserving a clean separation between the user interface, mathematics engine, configuration, and AI services.
+
+## Core capabilities
+
+| Area | Supported examples | Result handling |
 |---|---|---|
-| Calculus | Derivatives, integrals, limits | SymPy when parsed successfully |
-| Equations | Polynomial equations and roots | SymPy when parsed successfully |
-| Differential equations | Selected first- and second-order ODE forms | SymPy for supported forms |
-| Numerical methods | Newton–Raphson, bisection, secant, Simpson, trapezoidal, Euler, RK4 | Deterministic numeric adapter |
-| Number theory | GCD, LCM, factorization, totient, congruences, CRT, selected theorems, modulo | SymPy / deterministic adapter |
-| Linear algebra | Determinants, eigenvalues/eigenvectors, inverses, ranks, transposes | Deterministic SymPy adapter |
-| Real analysis | Selected sequence, series, Taylor, and integral computations | SymPy for supported computations; AI for theory/proofs |
-| Differential geometry | Curvature, arc length, Frenet–Serret, fundamental forms | SymPy for supported parametric forms |
-| Hydro mechanics | Continuity, Bernoulli, Reynolds, flow rate, pressure, Torricelli | Deterministic formula adapter for supported prompts |
-| Graphing | Explicit requests to plot or graph a function | Matplotlib rendering |
-| Attachments | JPG, PNG, WEBP, and PDF questions | Vision provider; deterministic verification when extractable |
+| **Calculus** | Derivatives, integrals, limits, substitutions, and selected differential-calculus prompts | SymPy verification when the expression is parsed successfully |
+| **Equations** | Polynomial equations, roots, and selected symbolic equations | Deterministic SymPy result for supported forms |
+| **Differential equations** | Selected first- and second-order ordinary differential equations | SymPy for supported equation structures; AI explanation for broader theory |
+| **Numerical methods** | Newton–Raphson, bisection, secant, Simpson, trapezoidal, Euler, and RK4 methods | Deterministic numerical adapters with input validation |
+| **Number theory** | GCD, LCM, factorization, Euler’s totient, congruences, CRT, modulo arithmetic, and selected theorems | SymPy or deterministic arithmetic adapters |
+| **Linear algebra** | Determinants, eigenvalues, eigenvectors, inverses, ranks, and transposes | Deterministic matrix adapters |
+| **Real analysis** | Selected sequences, series, Taylor expansions, and integral computations | SymPy for supported computations; AI for theory and proof-oriented questions |
+| **Differential geometry** | Curvature, arc length, Frenet–Serret quantities, and fundamental forms | Deterministic SymPy calculations for supported parametric forms |
+| **Hydro mechanics** | Continuity, Bernoulli, Reynolds number, flow rate, pressure, and Torricelli-style problems | Deterministic formula adapters for supported prompts |
+| **Graphing** | Requests to plot explicit functions or compare curves | Matplotlib rendering inside the Streamlit interface |
+| **Attachments** | JPG, PNG, WEBP, and PDF-based questions | Vision provider workflow with file validation and previews |
 
-The engine is intentionally not presented as a universal proof checker. For questions that cannot be deterministically parsed, the application sends the prompt to the configured AI provider and labels the result as AI-generated where appropriate.
+The engine is intentionally not presented as a universal theorem prover or proof verifier. A deterministic result is shown only when the request matches an implemented adapter and the computation succeeds.
+
+## User experience
+
+The application uses a chat-first interface inspired by modern conversational assistants while retaining mathematics-specific feedback. The empty state presents the product identity and the primary input rather than forcing users through a collection of demo cards. The sidebar provides topic guidance, optional example prompts, session-local chat management, attachment controls, and the current provider-availability status.
+
+Every response can include:
+
+- A natural-language explanation from the configured AI provider.
+- A deterministic SymPy or numerical result when a supported adapter succeeds.
+- A visible verification caption distinguishing AI explanation from deterministic computation.
+- A collapsible solution-tools section for downloading or copying the Markdown response.
+- A graph when the prompt requests a supported visualization.
 
 ## Architecture
 
-The current stabilization refactor keeps Streamlit as the user interface while separating the main responsibilities:
+The repository separates the main responsibilities of the original monolithic application into focused modules:
 
 ```text
 math-engine/
-├── app.py                         # Streamlit UI, session flow, and graph rendering
+├── app.py                         # Streamlit UI, session flow, chat rendering, and graphing
 ├── src/
+│   ├── config.py                  # Typed settings and environment-variable loading
 │   ├── engine/
-│   │   └── sympy_engine.py        # Deterministic symbolic and numeric adapters
+│   │   └── sympy_engine.py        # Deterministic symbolic and numerical adapters
 │   └── services/
-│       └── ai.py                  # Provider rotation, vision, uploads, verification
+│       └── ai.py                  # Provider rotation, prompts, verification, and uploads
 ├── tests/
-│   └── test_engine.py             # Deterministic engine regression tests
-├── requirements.txt               # Runtime dependencies actually used by the app
+│   ├── test_ai_service.py         # Provider retry and answer-normalization tests
+│   ├── test_config.py             # Settings and configuration safety tests
+│   └── test_engine.py             # Mathematics-engine regression tests
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # Python compilation and regression checks
+├── .env.example                   # Local configuration template
+├── requirements.txt               # Runtime dependencies
+├── PORTFOLIO.md                   # Project story and portfolio context
 └── README.md
 ```
 
-The next recommended phase is to split the remaining UI, persistence, and plotting concerns into their own modules and add provider mocks and upload fixtures.
+### Request flow
 
-## Run locally
+```text
+User prompt
+    │
+    ▼
+Streamlit chat interface
+    │
+    ├── Attachment validation and preview, when applicable
+    │
+    ├── SymPy / numerical adapter
+    │       │
+    │       ├── Supported and successful → verified result
+    │       └── Unsupported or unavailable → explanation path
+    │
+    └── AI provider rotation
+            │
+            ├── Groq
+            ├── Gemini fallback
+            └── OpenRouter fallback
+                    │
+                    ▼
+            Explanation + verification label
+```
+
+The deterministic engine is the source of mathematical verification for supported requests. The AI service is responsible for explanation, provider rotation, response cleanup, attachment workflows, and safe fallback behavior. Provider failures are not exposed as raw technical tracebacks to end users.
+
+## AI provider strategy
+
+The application supports multiple hosted providers so a temporary provider timeout, model retirement, or quota issue does not unnecessarily prevent the rest of the application from working.
+
+| Priority | Provider path | Purpose |
+|---|---|---|
+| 1 | Groq | Primary text explanation provider; the deployed configuration uses `openai/gpt-oss-20b` |
+| 2 | Gemini | Fallback text and vision workflow where configured |
+| 3 | OpenRouter | Last-resort text provider where configured |
+| 4 | Deterministic fallback | Preserves a verified result when an AI explanation cannot be obtained |
+
+AI providers are not required for supported deterministic calculations, but they are required for conversational explanations, broad theory questions, proofs, and some attachment workflows.
+
+## Local development
+
+### Requirements
+
+The project supports Python 3.10 and Python 3.11. A virtual environment is recommended for local development.
 
 ```bash
 git clone https://github.com/almuyed-saad/math-engine.git
 cd math-engine
+git checkout refactor/stabilize-saadai
+
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+### Start the application
+
+```bash
 streamlit run app.py
 ```
 
-Open `http://localhost:8501` in a browser.
+Then open [http://localhost:8501](http://localhost:8501) in a browser.
 
-Run the deterministic regression tests with:
+### Run the tests
+
+The repository uses Python’s built-in `unittest` discovery so the regression suite can run without an additional test framework:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
+To compile the main modules directly:
+
+```bash
+python -m py_compile \
+  app.py \
+  src/config.py \
+  src/engine/sympy_engine.py \
+  src/services/ai.py
+```
+
 ## Configuration
 
-AI providers are optional for deterministic SymPy requests but required for explanations and unsupported subjects. Configure provider credentials through environment variables or Hugging Face Space secrets:
+Provider credentials should be supplied through environment variables during local development or through private secrets in Hugging Face Spaces. **Never commit API keys to the repository or place them in public documentation.**
 
 ```text
 GROQ_API_KEY_1
@@ -76,29 +173,79 @@ GEMINI_API_KEY_4
 OPENROUTER_API_KEY
 ```
 
-Chat history is intentionally **session-local** in the portfolio edition. This keeps the application easy to understand and deploy while still allowing users to create, switch, and delete conversations during a demo session. A database is not required.
-
-## Example prompts
+Optional runtime controls are also supported:
 
 ```text
-Find the derivative of x^3 + 5x^2 - 3x + 7
-Integrate sin(x) * e^x dx
-Find limit of sin(x)/x as x -> 0
-Apply Newton-Raphson to x^3 - 2x - 5 = 0, x0=2, 3 iterations
-Apply bisection of x^3 - x on [0, 2], 4 iterations
-Find gcd of 84 and 30
-Solve 14x ≡ 30 (mod 44) using Euclidean algorithm
-Plot y = x^2 - 4 from -3 to 3
+PROVIDER_TIMEOUT_SECONDS
+MAX_UPLOAD_BYTES
+MAX_PDF_PAGES
 ```
 
-## Deployment notes
+The settings loader normalizes and clamps these values at startup. This prevents malformed deployment settings from creating unbounded timeouts, upload sizes, or PDF-processing limits.
 
-The active source uses hosted API providers rather than loading a local Hugging Face model at runtime. The dependency list therefore excludes the previously declared `transformers` and `torch` packages, which were not used by the current application and added unnecessary deployment weight.
+For local development, copy the template and fill in only the secrets required for the provider path you want to test:
 
-Runtime configuration is centralized in `src/config.py`. Copy `.env.example` to `.env` for local development, or add the same variables as Hugging Face Space secrets. Provider timeouts, upload size, and PDF page limits are validated and clamped at startup so malformed deployment values cannot create unbounded resource usage.
+```bash
+cp .env.example .env
+```
 
-For a portfolio deployment, add the provider secrets to Hugging Face Spaces or another Streamlit host, then launch the app with `streamlit run app.py`. No database or authentication setup is required. Every push and pull request runs the deterministic test suite and Python compilation checks through [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+The application intentionally keeps chat history in Streamlit session state. A database is not required for the current portfolio scope, and no user authentication is implemented.
+
+## Deployment on Hugging Face Spaces
+
+The production demonstration is deployed as a Streamlit Space at [saad-sust/SAAD_AI](https://huggingface.co/spaces/saad-sust/SAAD_AI). The Space contains a flat deployment bundle because Hugging Face launches the root `app.py` directly:
+
+```text
+app.py
+ai.py
+config.py
+sympy_engine.py
+requirements.txt
+README.md
+```
+
+To reproduce the deployment on another Streamlit-compatible host:
+
+1. Upload the application files and install the dependencies from `requirements.txt`.
+2. Store provider credentials as private environment variables or platform secrets.
+3. Launch the root application with `streamlit run app.py`.
+4. Confirm that the deterministic test prompt returns both a correct result and the expected verification caption.
+
+The active runtime uses hosted API providers and does not load a local Hugging Face transformer model. The dependency list therefore remains focused on Streamlit, requests, SymPy, NumPy, Matplotlib, Pillow, and PyMuPDF rather than including unused `transformers` or `torch` packages.
+
+## Continuous integration
+
+GitHub Actions runs on pushes to `main`, the stabilization branch pattern, and pull requests. The workflow tests Python 3.10 and 3.11, installs the runtime dependencies, compiles the core modules, and runs the complete regression suite.
+
+Workflow definition: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+## Limitations and design decisions
+
+Saad.AI is a polished portfolio project rather than a multi-user enterprise platform. The following constraints are intentional:
+
+- Chat history is session-local and is lost when the Streamlit session ends.
+- There is no database, authentication layer, or user account system.
+- Deterministic verification applies only to supported adapters and successfully parsed inputs.
+- AI-generated proofs and explanations should be reviewed by a mathematics instructor or student rather than treated as formal certification.
+- Provider availability depends on valid secrets, provider quotas, model availability, and network access.
+- Attachment solving depends on the configured vision-capable provider and the platform’s upload limits.
+
+These boundaries keep the deployment simple, make the architecture easy to explain, and leave clear opportunities for future extensions without implying guarantees the current system does not provide.
+
+## Possible future extensions
+
+Future work could add broader parser coverage, more formal proof tooling, richer graphing controls, stronger attachment fixtures, provider mocks, and optional persistent accounts. Those features are deliberately outside the current portfolio scope; the present version prioritizes correctness of supported calculations, transparent verification labels, maintainable structure, and a straightforward permanent deployment.
 
 ## Credits
 
-The project was created by Saad for B.Sc. Mathematics students at Shahjalal University of Science and Technology. It uses [Streamlit](https://streamlit.io), [SymPy](https://www.sympy.org), [Matplotlib](https://matplotlib.org), and hosted AI provider APIs.
+Saad.AI was created by **Saad** for B.Sc. mathematics learning and portfolio demonstration. The project builds on the following open-source and hosted technologies:
+
+- [Streamlit](https://streamlit.io/) for the interactive application interface.
+- [SymPy](https://www.sympy.org/) for symbolic mathematics and deterministic computation.
+- [NumPy](https://numpy.org/) and [Matplotlib](https://matplotlib.org/) for numerical work and graphing.
+- [Pillow](https://python-pillow.org/) and [PyMuPDF](https://pymupdf.readthedocs.io/) for attachment handling.
+- Hosted AI provider APIs for explanations and vision-assisted workflows.
+
+## License
+
+No license file is currently included in the repository. If this project is intended for public reuse, add an explicit license before accepting external contributions or redistributing the code.
