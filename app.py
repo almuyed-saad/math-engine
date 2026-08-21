@@ -763,19 +763,10 @@ if not st.session_state.messages:
         from { opacity:0; transform:translateY(24px); }
         to   { opacity:1; transform:translateY(0); }
     }
-    @keyframes gradientShift {
-        0%   { background-position: 0% 50%; }
-        50%  { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
     @keyframes floatSymbol {
         0%,100% { transform: translateY(0px) rotate(0deg); opacity:0.18; }
         33%      { transform: translateY(-8px) rotate(5deg); opacity:0.32; }
         66%      { transform: translateY(4px) rotate(-3deg); opacity:0.22; }
-    }
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to   { transform: rotate(360deg); }
     }
     .saad-welcome-wrap {
         position: relative;
@@ -783,7 +774,7 @@ if not st.session_state.messages:
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 5rem 1rem 4rem 1rem;
+        padding: 3.8rem 1rem 2.4rem 1rem;
         text-align: center;
         animation: fadeInUp 0.7s cubic-bezier(.22,1,.36,1) both;
         overflow: hidden;
@@ -810,12 +801,10 @@ if not st.session_state.messages:
         font-size: 3rem;
         font-weight: 800;
         background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 40%, #f472b6 70%, #60a5fa 100%);
-        background-size: 300% 300%;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        animation: gradientShift 4s ease infinite;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         margin-bottom: 0.5rem;
         font-family: 'Inter', sans-serif;
     }
@@ -830,14 +819,12 @@ if not st.session_state.messages:
         border: 2px solid transparent;
         background: linear-gradient(#0f0f0f, #0f0f0f) padding-box,
                     linear-gradient(135deg, #3b82f6, #a78bfa, #f472b6) border-box;
-        animation: spin 3s linear infinite;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
     }
     .math-ring-inner {
-        animation: spin 3s linear infinite reverse;
         font-size: 1.4rem;
     }
     .saad-tagline {
@@ -874,27 +861,15 @@ if not st.session_state.messages:
         <div class="saad-main-name">Saad.AI</div>
         <!-- Tagline -->
         <div class="saad-tagline">
-            BSc Mathematics
-            <span>·</span> Step-by-Step Solutions
-            <span>·</span> SymPy Verified
-            <span>·</span> LaTeX Rendered
+            B.Sc. Mathematics Engine
+            <span>·</span> Verified by SymPy
+            <span>·</span> Explained by AI
+        </div>
+        <div class="saad-tagline" style="margin-top:0.85rem; color:#64748b;">
+            Ask a mathematical question to begin.
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-    st.markdown("### Explore a worked example")
-    st.caption("Start with a guided problem, then try your own question. Supported calculations are verified by SymPy before the AI explanation is shown.")
-    demo_cols = st.columns(3)
-    demo_prompts = [
-        ("📈 Calculus", "Find the derivative of x^3 + 5x^2 - 3x + 7"),
-        ("🔢 Linear algebra", "Find eigenvalues of matrix [[4,1],[2,3]]"),
-        ("🧮 Numerical", "Apply Newton-Raphson to x^3 - 2x - 5 = 0, x0=2, 3 iterations"),
-    ]
-    for demo_col, (label, prompt) in zip(demo_cols, demo_prompts):
-        with demo_col:
-            if st.button(label, use_container_width=True, key=f"demo_{label}"):
-                st.session_state.demo_problem = prompt
-                st.rerun()
 
 # Small corner header — only when chat has started
 else:
@@ -1020,11 +995,7 @@ user_input = st.chat_input(
     placeholder="Type a math problem... or attach a file in the sidebar ← then ask here",
 )
 
-# Also allow clicking an example to submit it directly
-demo_problem = st.session_state.pop("demo_problem", "")
-if demo_problem and demo_problem != st.session_state.last_submitted:
-    problem = demo_problem
-elif prefill and prefill != st.session_state.last_submitted:
+if prefill and prefill != st.session_state.last_submitted:
     problem = prefill
 elif user_input and user_input.strip():
     problem = user_input.strip()
