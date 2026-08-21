@@ -866,6 +866,20 @@ if not st.session_state.messages:
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown("### Explore a worked example")
+    st.caption("Start with a guided problem, then try your own question. Supported calculations are verified by SymPy before the AI explanation is shown.")
+    demo_cols = st.columns(3)
+    demo_prompts = [
+        ("📈 Calculus", "Find the derivative of x^3 + 5x^2 - 3x + 7"),
+        ("🔢 Linear algebra", "Find eigenvalues of matrix [[4,1],[2,3]]"),
+        ("🧮 Numerical", "Apply Newton-Raphson to x^3 - 2x - 5 = 0, x0=2, 3 iterations"),
+    ]
+    for demo_col, (label, prompt) in zip(demo_cols, demo_prompts):
+        with demo_col:
+            if st.button(label, use_container_width=True, key=f"demo_{label}"):
+                st.session_state.demo_problem = prompt
+                st.rerun()
+
 # Small corner header — only when chat has started
 else:
     st.markdown("""
@@ -989,7 +1003,10 @@ user_input = st.chat_input(
 )
 
 # Also allow clicking an example to submit it directly
-if prefill and prefill != st.session_state.last_submitted:
+demo_problem = st.session_state.pop("demo_problem", "")
+if demo_problem and demo_problem != st.session_state.last_submitted:
+    problem = demo_problem
+elif prefill and prefill != st.session_state.last_submitted:
     problem = prefill
 elif user_input and user_input.strip():
     problem = user_input.strip()
